@@ -6,9 +6,9 @@ SET 'ksql.streams.cache.max.bytes.buffering' = '0';
 
 -- DROP STREAM/TABLE --
 DROP STREAM IF EXISTS test;
-DROP TABLE IF EXISTS pageview_country;
-DROP TABLE IF EXISTS cleaned_users_table;
-DROP STREAM IF EXISTS cleaned_users_stream;
+DROP TABLE IF EXISTS pageview_country_table;
+DROP TABLE IF EXISTS cleaned_pageview_stream;
+DROP STREAM IF EXISTS cleaned_users_table;
 DROP TABLE IF EXISTS pageview_tumbling_table;
 DROP TABLE IF EXISTS pageview_hopping_table;
 DROP TABLE IF EXISTS pageview_session_table;
@@ -56,40 +56,51 @@ CREATE TABLE users_table AS
 
 -- CLEAN & AGGREGATE --
 
-CREATE STREAM cleaned_users_stream
+CREATE TABLE cleaned_users_table
   WITH (
     KAFKA_TOPIC='topic4'
     , PARTITIONS=5
-    , VALUE_FORMAT='AVRO'
+    , VALUE_FORMAT='JSON'
   ) AS
-    SELECT user_id, age, gender, country, subscription 
+    SELECT 
+      user_id
+      , LATEST_BY_OFFSET(age) AS age
+      , LATEST_BY_OFFSET(country) AS country
+      , LATEST_BY_OFFSET(subscription) AS subscription
     FROM users_stream
     WHERE user_id IS NOT NULL
       AND age IS NOT NULL
       AND gender IS NOT NULL
       AND country IS NOT NULL
-      AND subscription IS NOT NULL;
-CREATE TABLE cleaned_users_table AS
-  SELECT
-    user_id
-    , LATEST_BY_OFFSET(age) AS age
-    , LATEST_BY_OFFSET(gender) AS gender
-    , LATEST_BY_OFFSET(country) AS country
-    , LATEST_BY_OFFSET(subscription) AS subscription
-  FROM cleaned_users_stream
-  GROUP BY user_id;
+      AND subscription IS NOT NULL
+    GROUP BY user_id;
 
-CREATE TABLE pageview_country
+CREATE STREAM cleaned_pageview_stream
+  WITH (VALUE_FORMAT='JSON') AS
+    SELECT
+      cleaned_users_table.user_id
+      , age
+      , country
+      , subscription
+      , event_timestamp 
+    FROM pageview_stream
+    LEFT JOIN cleaned_users_table
+      ON CAST(pageview_stream.user_id AS BIGINT) = cleaned_users_table.user_id;
+
+CREATE TABLE pageview_country_table
   WITH (
     KAFKA_TOPIC='topic5'
     , PARTITIONS=5
-    , VALUE_FORMAT='AVRO'
+    , VALUE_FORMAT='JSON'
   ) AS
-    SELECT cleaned_users_table.country, COUNT(*) AS pageview_count
-    FROM pageview_stream
-    JOIN cleaned_users_table
-      ON CAST(pageview_stream.user_id AS BIGINT) = cleaned_users_table.user_id
-    GROUP BY cleaned_users_table.country;
+    SELECT
+      country
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWSTART),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_start
+      , AVG(age) AS average_age
+      , COUNT(*) AS pageview_count
+    FROM cleaned_pageview_stream
+    WINDOW TUMBLING (SIZE 5 MINUTES)
+    GROUP BY country;
 
 -- WINDOWS --
 
@@ -99,9 +110,13 @@ CREATE TABLE pageview_tumbling_table
     , PARTITIONS=5
     , VALUE_FORMAT='JSON'
   ) AS
-    SELECT source, COUNT(*) AS pageview_count
+    SELECT
+      source
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWSTART),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_start
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWEND),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_end
+      , COUNT(*) AS pageview_count
     FROM pageview_stream
-    WINDOW TUMBLING (SIZE 30 SECONDS)
+    WINDOW TUMBLING (SIZE 5 MINUTES)
     GROUP BY source;
 
 CREATE TABLE pageview_hopping_table
@@ -110,9 +125,13 @@ CREATE TABLE pageview_hopping_table
     , PARTITIONS=5
     , VALUE_FORMAT='JSON'
   ) AS
-    SELECT source, COUNT(*) AS pageview_count
+    SELECT
+      source
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWSTART),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_start
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWEND),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_end
+      , COUNT(*) AS pageview_count
     FROM pageview_stream
-    WINDOW HOPPING (SIZE 60 SECONDS, ADVANCE BY 30 SECONDS)
+    WINDOW HOPPING (SIZE 5 MINUTES, ADVANCE BY 1 MINUTES)
     GROUP BY source;
 
 CREATE TABLE pageview_session_table
@@ -121,7 +140,11 @@ CREATE TABLE pageview_session_table
     , PARTITIONS=5
     , VALUE_FORMAT='JSON'
   ) AS
-    SELECT source, COUNT(*) AS pageview_count
+    SELECT
+      source
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWSTART),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_start
+      , FORMAT_TIMESTAMP(FROM_UNIXTIME(WINDOWEND),'yyyy-MM-dd HH:mm:ss', 'UTC') AS window_end
+      , COUNT(*) AS pageview_count
     FROM pageview_stream
     WINDOW SESSION (5 MINUTES)
     GROUP BY source;

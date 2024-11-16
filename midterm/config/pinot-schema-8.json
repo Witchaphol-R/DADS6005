@@ -1,0 +1,29 @@
+{
+  "schemaName": "pageview_session",
+  "dimensionFieldSpecs": [
+    {
+      "name": "source",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "pageview_count",
+      "dataType": "LONG"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "window_start",
+      "dataType": "LONG",
+      "format": "1:SECONDS:EPOCH",
+      "granularity": "1:MINUTES"
+    },
+    {
+      "name": "window_end",
+      "dataType": "LONG",
+      "format": "1:SECONDS:EPOCH",
+      "granularity": "1:MINUTES"
+    }
+  ]
+}

@@ -20,9 +20,9 @@ if os.path.exists(timestamp_file):
 else:
   start_timestamp = datetime.now()
 
-start_timestamp = start_timestamp + timedelta(minutes=15)
+start_timestamp = start_timestamp + timedelta(minutes=30)
 last_timestamp = start_timestamp
-cursor.execute("SELECT user_id FROM Users")
+cursor.execute("SELECT user_id FROM Users LIMIT 500")
 users = cursor.fetchall()
 
 for user in users:
@@ -30,7 +30,7 @@ for user in users:
   unique_number = str(fake.unique.random_number(digits=4)).zfill(4)
   user_name = fake.name()
   device = random.choice(['Mobile', 'Desktop', 'Tablet'])
-  login_timestamp = start_timestamp + timedelta(minutes=random.randint(1, 120))
+  login_timestamp = start_timestamp + timedelta(minutes=random.randint(1, 30))
   session_id = f"{login_timestamp.strftime('%Y%m%d-%H%M%S')}-{unique_number}"
 
   user_session = {

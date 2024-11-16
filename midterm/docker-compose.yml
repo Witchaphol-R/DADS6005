@@ -29,6 +29,8 @@ services:
     image: confluentinc/cp-kafka:7.2.1
     ports:
       - 9093:9093
+    expose:
+      - "9092"
     depends_on:
       - zookeeper
     environment:

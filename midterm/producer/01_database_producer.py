@@ -3,7 +3,7 @@ import random, pymysql
 conn = pymysql.connect(host='localhost', port=3307, user='user', password='password', db='demo')
 cursor = conn.cursor()
 
-for _ in range(100):
+for _ in range(200):
   age = random.randint(20, 60)
   gender = random.choice(['Male', 'Female'])
   country = random.choice(['Thailand', 'Singapore', 'Vietnam'])
