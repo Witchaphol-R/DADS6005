@@ -35,11 +35,9 @@
 `topic7`: PageView Hopping - *Hopping Windows*  
 `topic8`: PageView Session - *Session Windows*  
 
-# 3. Apache Pinot
+# 3. Apache Pinot & Streamlit
 
-# 4. Streamlit
-
-# 5. Docker Setup
+# 4. Docker Setup
 
 ### Download and Build Containers
 Build image and connector  
@@ -81,7 +79,7 @@ do
 done
 ```
 
-### Setup Connector, Create Stream, and Populate Data
+### Setup Connectors, Create Streams, and Populate Data
 Run init.sh using Git Bash  
 ```bash
 sh init.sh
