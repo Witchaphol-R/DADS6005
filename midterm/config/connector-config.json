@@ -1,0 +1,19 @@
+{
+  "name": "jdbc-source-connector",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "tasks.max": "1",
+    "connection.url": "jdbc:mysql://mysql-server:3306/demo?useSSL=false",
+    "connection.user": "user",
+    "connection.password": "password",
+    "table.whitelist": "Users",
+    "mode": "incrementing",
+    "key.field": "user_id",
+    "incrementing.column.name": "user_id",
+    "topic.prefix": "topic3_",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter.schemas.enable": "true"
+  }
+}

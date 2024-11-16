@@ -1,0 +1,258 @@
+services:
+  mysql-server:
+    container_name: mysql-server
+    image: mysql:5.7
+    restart: unless-stopped
+    ports: 
+      - 3307:3306
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: demo
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: password
+    volumes: 
+      - ./config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks: 
+      - nx
+  
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:7.2.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - nx
+
+  kafka1:
+    container_name: kafka1
+    image: confluentinc/cp-kafka:7.2.1
+    ports:
+      - 9093:9093
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: kafka1
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9093,INTERNAL://kafka1:9092
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9093,INTERNAL://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    networks:
+      - nx
+
+  kafka2:
+    container_name: kafka2
+    image: confluentinc/cp-kafka:7.2.1
+    ports:
+      - 9094:9094
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: kafka2
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9094,INTERNAL://kafka2:9092
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9094,INTERNAL://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    networks:
+      - nx
+
+  kafka3:
+    container_name: kafka3
+    image: confluentinc/cp-kafka:7.2.1
+    ports:
+      - 9095:9095
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ADVERTISED_HOST_NAME: kafka3
+      KAFKA_ADVERTISED_LISTENERS: EXTERNAL://localhost:9095,INTERNAL://kafka3:9092
+      KAFKA_LISTENERS: EXTERNAL://0.0.0.0:9095,INTERNAL://0.0.0.0:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: EXTERNAL:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    networks:
+      - nx
+
+  create-topics:
+    container_name: create-topics
+    image: confluentinc/cp-kafka-connect-base:7.2.1
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3
+    command: "bash -c 'while [ ! nc -z kafka1 9092 ]; do sleep 3; done && /create-topics.sh'"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONNECT_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092,kafka3:9092
+    entrypoint: /create-topics.sh
+    volumes:
+      - ./config/create-topics.sh:/create-topics.sh
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - nx
+
+  schema-registry:
+    container_name: schema-registry
+    image: confluentinc/cp-schema-registry:7.5.0
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3 
+    ports:
+      - 8081:8081
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://kafka1:9092,PLAINTEXT://kafka2:9092,PLAINTEXT://kafka3:9092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - nx
+
+  kafka-connect:
+    container_name: kafka-connect
+    image: confluentinc/cp-kafka-connect:5.2.2
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+      - schema-registry
+    ports:
+      - 8083:8083
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'kafka1:9092,kafka2:9092,kafka3:9092'
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: "kafka-conn"
+      CONNECT_CONFIG_STORAGE_TOPIC: "kafka-conn-config"
+      CONNECT_OFFSET_STORAGE_TOPIC: "kafka-conn-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "kafka-conn-status"
+      CONNECT_KEY_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      CONNECT_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
+    volumes:
+      - ./config/mysql-connector-java-5.1.37-bin.jar:/usr/share/java/kafka/mysql-connector-java-5.1.37-bin.jar
+    networks:
+      - nx
+
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - 8888:8080
+    depends_on:
+      - kafka1
+      - kafka2
+      - kafka3 
+      - schema-registry
+      - kafka-connect
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092
+      KAFKA_CLUSTERS_0_METRICS_PORT: 9997
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: local
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-connect:8083
+      DYNAMIC_CONFIG_ENABLED: 'true'  
+    networks:
+      - nx
+
+  ksqldb-server:
+    container_name: ksqldb-server
+    image: confluentinc/ksqldb-server:0.29.0
+    depends_on:
+      - zookeeper
+      - kafka1
+      - kafka2
+      - kafka3
+      - schema-registry
+    ports:
+      - 8088:8088
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_LOG4J_OPTS: "-Dlog4j.configuration=file:/etc/ksql/log4j.properties"
+      KSQL_BOOTSTRAP_SERVERS: "kafka1:9092,kafka2:9092,kafka3:9092"
+      KSQL_HOST_NAME: ksqldb-server
+      KSQL_LISTENERS: "http://0.0.0.0:8088"
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_CONNECT_URL: 'http://kafka-connect:8083'
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+    volumes:
+      - ./config/log4j.properties:/etc/ksql/log4j.properties
+    networks:
+      - nx
+
+  ksqldb-cli:
+    container_name: ksqldb-cli
+    image: confluentinc/ksqldb-cli:0.29.0
+    depends_on:
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+    networks:
+      - nx
+
+  pinot-controller:
+    container_name: pinot-controller
+    image: apachepinot/pinot:0.12.0
+    command: "StartController -zkAddress zookeeper:2181 -dataDir /data"
+    restart: unless-stopped
+    ports:
+      - 9000:9000
+    depends_on:
+      - zookeeper
+    networks: 
+      - nx
+
+  pinot-broker:
+    container_name: pinot-broker
+    image: apachepinot/pinot:0.12.0
+    command: "StartBroker -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    ports:
+      - 8099:8099
+    depends_on:
+      - pinot-controller
+    networks: 
+      - nx
+
+  pinot-server:
+    container_name: pinot-server
+    image: apachepinot/pinot:0.12.0
+    command: "StartServer -zkAddress zookeeper:2181"
+    restart: unless-stopped
+    depends_on:
+      - pinot-broker
+    networks: 
+      - nx
+
+  streamlit:
+    container_name: streamlit
+    image: streamlit-image
+    volumes:
+      - ./:/app
+    ports:
+      - 8501:8501
+    command: streamlit run /app/app.py
+    depends_on:
+      - pinot-server
+    networks: 
+      - nx
+      
+networks:
+  nx:
+    name: nx
