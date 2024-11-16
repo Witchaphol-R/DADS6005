@@ -4,4 +4,5 @@ pymysql
 numpy
 pandas
 matplotlib
+plotly
 streamlit

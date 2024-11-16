@@ -9,15 +9,15 @@
   "metricFieldSpecs": [
     {
       "name": "pageview_count",
-      "dataType": "LONG"
+      "dataType": "INT"
     }
   ],
   "dateTimeFieldSpecs": [
     {
       "name": "timestamp",
-      "dataType": "LONG",
-      "format": "1:MINUTES:EPOCH",
-      "granularity": "1:MINUTES"
+      "dataType": "TIMESTAMP",
+      "format": "1:SECONDS:SIMPLE_DATE_FORMAT:yyyy-MM-dd HH:mm:ss",
+      "granularity": "1:SECONDS"
     }
   ]
 }
