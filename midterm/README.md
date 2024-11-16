@@ -37,6 +37,14 @@
 
 # 3. Apache Pinot & Streamlit
 
+### Realtime Tables:
+```
+pageview_country_REALTIME
+pageview_hopping_REALTIME
+pageview_session_REALTIME
+pageview_tumbling_REALTIME
+```
+
 # 4. Docker Setup
 
 ### Download and Build Containers
