@@ -93,7 +93,7 @@ Run init.sh using Git Bash
 sh init.sh
 ```
 
-Processes executed by `init.sh`:
+Processes executed by `init.sh`:  
 `Initialize Connector`
 ```bash
 curl -X POST -H "Content-Type: application/json" -d @./config/connector-config.json http://localhost:8083/connectors
