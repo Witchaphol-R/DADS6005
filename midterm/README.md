@@ -122,7 +122,7 @@ curl -X POST -H "Content-Type: application/json" -d @./config/connector-config.j
 curl -X POST -H "Content-Type: application/json" -d @./config/pinot-schema-$i.json http://localhost:9000/schemas
 curl -X POST -H "Content-Type: application/json" -d @./config/pinot-config-$i.json http://localhost:9000/tables
 ```
-```
+```json
 {
   "tableName": "pageview_tumbling_REALTIME",
   "tableType": "REALTIME",
@@ -182,7 +182,7 @@ curl -X POST -H "Content-Type: application/json" -d @./config/pinot-config-$i.js
   "isDimTable": false
 }
 ```
-`python scripts`
+`Run Producers`
 ```bash
 "./producer/00_set_timestamp.py"
 "./producer/01_database_producer.py"
