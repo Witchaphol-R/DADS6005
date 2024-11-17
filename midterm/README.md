@@ -37,13 +37,33 @@
 
 # 3. Apache Pinot & Streamlit
 
-### Realtime Tables:
+Apache Pinot and Streamlit are used for real-time analytics and interactive visualization of the data streams.
+
+### Apache Pinot
+Apache Pinot is a real-time distributed OLAP datastore, which is used to deliver scalable real-time analytics with low latency. It can ingest data from batch and stream data sources (such as Kafka).
+
+In this system, real-time tables in Pinot are created based on topic5 to topic8.
+The Pinot table configurations and schemas are uploaded using REST API calls:
+```
+curl -X POST -H "Content-Type: application/json" -d @./config/pinot-schema-5.json http://localhost:9000/schemas
+curl -X POST -H "Content-Type: application/json" -d @./config/pinot-config-5.json http://localhost:9000/tables
+```
+
+The configuration and schema files (pinot-config-5.json, pinot-schema-5.json, and so on for 6-8) define the table structure and settings in Pinot.
+
+The created real-time tables are:
 ```
 pageview_country_REALTIME
 pageview_hopping_REALTIME
 pageview_session_REALTIME
 pageview_tumbling_REALTIME
 ```
+
+### Streamlit
+Streamlit is an open-source Python library that makes it easy to create custom web apps for machine learning and data science.
+
+In this system, Streamlit is used to query the real-time tables in Pinot and plot the charts for each table. The charts provide visual insights into user count by country and user count by each window (grouped by source). The real-time data will be fetched every 15 seconds.
+
 
 # 4. Docker Setup
 
