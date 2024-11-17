@@ -38,21 +38,21 @@ In this system, we have three Kafka brokers (kafka1, kafka2, kafka3) configured 
 
 The first three topics (topic1, topic2, topic3) are used to create STREAMS and TABLES in KSQL DB. The KSQL commands are executed by `./ksql/01_create_stream.py` using the Python subprocess to send the commands in the KSQL docker environment.  
 
-`topic1`: PageView - Base Stream
-`topic2`: UserSession - Base Stream
-`topic3`: Users - Base Table
+`topic1`: PageView - Base Stream  
+`topic2`: UserSession - Base Stream  
+`topic3`: Users - Base Table  
 
 The topic4 and topic5 are the cleaned users' table joined with the view events.  
 The output is the average age and user count by country.  
 
-`topic4`: CleanedUsers - Users table without NULL values
-`topic5`: PageView Country - PageView joined with CleanedUsers
+`topic4`: CleanedUsers - Users table without NULL values  
+`topic5`: PageView Country - PageView joined with CleanedUsers  
 
 Topics 6-8 use different window functions to get the real-time user count based on various page sources.  
 
-`topic6`: PageView Tumbling - Tumbling Windows
-`topic7`: PageView Hopping - Hopping Windows
-`topic8`: PageView Session - Session Windows
+`topic6`: PageView Tumbling - Tumbling Windows  
+`topic7`: PageView Hopping - Hopping Windows  
+`topic8`: PageView Session - Session Windows  
 
 The sample of the output can be obtained by `./ksql/02_testing_correctness.py`, which will output a few rows from each tables.  
 
